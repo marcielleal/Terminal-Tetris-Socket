@@ -1,4 +1,3 @@
-#!/usr/bin/python
 
 """
 Python implementation of text-mode version of the Tetris game
@@ -12,7 +11,7 @@ Quick play instructions:
  - e (return): just move the piece downwards as is
 
 """
-
+from time import sleep
 import os
 import random
 import sys
@@ -88,20 +87,20 @@ def print_board(board, curr_piece, piece_pos, error_message=''):
         print ""
 
     print "Quick play instructions:\n"
-    print " - a (return): move piece left"
-    print " - d (return): move piece right"
-    print " - w (return): rotate piece counter clockwise"
-    print " - s (return): rotate piece clockwise"
+    print " - Pot lef: move piece left"
+    print " - Pot right: move piece right"
+    print " - Button: rotate piece counter clockwise"
+    #print " - s (return): rotate piece clockwise"
 
     # In case user doesn't want to alter the position of the piece
     # and he doesn't want to rotate the piece either and just wants to move
     # in the downward direction, he can choose 'f'
-    print " - e (return): just move the piece downwards as is"
-    print " - q (return): to quit the game anytime"
+    print " - low light: just move the piece downwards"
+    print " - high light: to quit the game anytime"
 
     if error_message:
         print error_message
-    print "Your move:",
+    #print "Your move:",
 
 
 def init_board():
@@ -437,91 +436,214 @@ def can_rotate_clockwise(board, curr_piece, piece_pos):
     return overlap_check(board, curr_piece, piece_pos)
 
 
+
+
+
+
+#########################################################
+#!/usr/bin/python
+
+from threading import Thread
+from time import sleep
+entrada="s"
+
+def readAnalog(number):
+	PATH_ADC= "/sys/bus/iio/devices/iio:device0/in_voltage" + str(number) + "_raw"
+	fs= open(PATH_ADC, "r")
+	ret= int(fs.readline())
+	fs.close()
+	return ret
+
+def controlPot ():
+	number = readAnalog (1)
+	if(number < 3600):
+		return 'L'
+	elif(number > 3800):
+		return 'R'
+	else:
+		return 'N'
+
+def controlLDR():
+	number = readAnalog(0)
+	if(number < 500):
+		return 'S'
+	elif (number >3500):
+		return 'P'
+	else:
+		return 'N'
+
+def controlButton():
+	export=open("/sys/class/gpio/export","a")
+	export.write("115")
+	valueFile=open("/sys/class/gpio/gpio115/value","r")
+	value=int(valueFile.readline())
+	valueFile.close()
+	try:
+		export.close()
+	except: 
+		pass
+	return value
+
+globalMove=""
+fim=False
+
+class Controls (Thread):
+	def __init__(self,mestre):
+		Thread.__init__(self)
+		self.mestre = mestre
+		self.lock = False
+
+	def run(self):
+		global fim
+		while(1):
+			if self.mestre:
+				if self.mestre.lock:
+					continue
+				elif self.mestre.mestre:
+					if self.mestre.mestre.lock:
+						continue
+		
+			if not self.mestre:
+				if (controlPot()== "L"):
+					global globalMove
+					globalMove="a"
+					self.lock=True
+				elif (controlPot()== "R"):
+					global globalMove
+					globalMove="d"
+					self.lock=True
+				elif (controlPot()== "N"):
+					self.lock=False
+			else:
+				if not self.mestre.mestre:
+					if (controlLDR()== "S"):
+						global globalMove
+						globalMove="e"
+						self.lock=True
+						continue
+					elif (controlLDR()== "P"):
+						fim=True
+						self.lock=False
+					else:
+						self.lock=False
+				else:
+					if(controlButton()):
+						global globalMove
+						globalMove="w"
+					
+			#sleep(0.5)
+			if fim:
+				break
+
+############################
+
+
+
 def play_game():
 
-    """
-    Parameters:
-    -----------
-    None
+	"""
+	Parameters:
+	-----------
+	None
 
-    Returns:
-    --------
-    None
+	Returns:
+	--------
+	None
 
-    Details:
-    --------
-    - Initializes the game
-    - Reads player move from the STDIN
-    - Checks for the move validity
-    - Continues the gameplay if valid move, else prints out error msg
-      without changing the board
-    - Fixes the piece position on board if it cannot be moved
-    - Pops in new piece on top of the board
-    - Quits if no valid moves and possible for a new piece
-    - Quits in case user wants to quit
+	Details:
+	--------
+	- Initializes the game
+	- Reads player move from the STDIN
+	- Checks for the move validity
+	- Continues the gameplay if valid move, else prints out error msg
+	  without changing the board
+	- Fixes the piece position on board if it cannot be moved
+	- Pops in new piece on top of the board
+	- Quits if no valid moves and possible for a new piece
+	- Quits in case user wants to quit
 
-    """
+	"""
+	global globalMove
+	board = init_board()
+	player_move = ""
+	curr_piece = get_random_piece()
+	piece_pos = get_random_position(curr_piece)
+	print_board(board, curr_piece, piece_pos)
+	ERR_MSG = ""
+	
+	g1= Controls (None)
+	g2= Controls (g1)
+	g3= Controls (g2)
+	
+	g1.start()
+	g2.start()
+	g3.start()
 
-    # Initialize the game board, piece and piece position
-    board = init_board()
-    curr_piece = get_random_piece()
-    piece_pos = get_random_position(curr_piece)
-    print_board(board, curr_piece, piece_pos)
+	# Get player move from STDIN
+	
+	while (not is_game_over(board, curr_piece, piece_pos) and not fim):
+		ERR_MSG = ""
+		do_move_down = True
+		
+		player_move = globalMove
+		globalMove=""
+			
+		if player_move == MOVE_LEFT:
+			if can_move_left(board, curr_piece, piece_pos):
+				piece_pos = get_left_move(piece_pos)
+				do_move_down = True
+			else:
+				ERR_MSG = "Cannot move left!"
+		elif player_move == MOVE_RIGHT:
+			if can_move_right(board, curr_piece, piece_pos):
+				piece_pos = get_right_move(piece_pos)
+				do_move_down = True
+			else:
+				ERR_MSG = "Cannot move right!"
+		elif player_move == ROTATE_ANTICLOCKWISE:
+			if can_rotate_anticlockwise(board, curr_piece, piece_pos):
+				curr_piece = rotate_anticlockwise(curr_piece)
+				do_move_down = True
+			else:
+				ERR_MSG = "Cannot rotate anti-clockwise !"
+		elif player_move == ROTATE_CLOCKWISE:
+			if can_rotate_clockwise(board, curr_piece, piece_pos):
+				curr_piece = rotate_clockwise(curr_piece)
+				do_move_down = True
+			else:
+				ERR_MSG = "Cannot rotate clockwise!"
+		elif player_move == NO_MOVE:
+			do_move_down = True
+		elif player_move == QUIT_GAME:
+			print "Bye. Thank you for playing!"
+			sys.exit(0)
+		else:
+			print "OK"
+			#ERR_MSG = "That is not a valid move!"
 
-    # Get player move from STDIN
-    player_move = raw_input()
-    while (not is_game_over(board, curr_piece, piece_pos)):
-        ERR_MSG = ""
-        do_move_down = False
-        if player_move == MOVE_LEFT:
-            if can_move_left(board, curr_piece, piece_pos):
-                piece_pos = get_left_move(piece_pos)
-                do_move_down = True
-            else:
-                ERR_MSG = "Cannot move left!"
-        elif player_move == MOVE_RIGHT:
-            if can_move_right(board, curr_piece, piece_pos):
-                piece_pos = get_right_move(piece_pos)
-                do_move_down = True
-            else:
-                ERR_MSG = "Cannot move right!"
-        elif player_move == ROTATE_ANTICLOCKWISE:
-            if can_rotate_anticlockwise(board, curr_piece, piece_pos):
-                curr_piece = rotate_anticlockwise(curr_piece)
-                do_move_down = True
-            else:
-                ERR_MSG = "Cannot rotate anti-clockwise !"
-        elif player_move == ROTATE_CLOCKWISE:
-            if can_rotate_clockwise(board, curr_piece, piece_pos):
-                curr_piece = rotate_clockwise(curr_piece)
-                do_move_down = True
-            else:
-                ERR_MSG = "Cannot rotate clockwise!"
-        elif player_move == NO_MOVE:
-            do_move_down = True
-        elif player_move == QUIT_GAME:
-            print "Bye. Thank you for playing!"
-            sys.exit(0)
-        else:
-            ERR_MSG = "That is not a valid move!"
+		if do_move_down and can_move_down(board, curr_piece, piece_pos):
+			piece_pos = get_down_move(piece_pos)
 
-        if do_move_down and can_move_down(board, curr_piece, piece_pos):
-            piece_pos = get_down_move(piece_pos)
+		# This means the current piece in the game cannot be moved
+		# We have to fix this piece in the board and generate a new piece
+		if not can_move_down(board, curr_piece, piece_pos):
+			merge_board_and_piece(board, curr_piece, piece_pos)
+			curr_piece = get_random_piece()
+			piece_pos = get_random_position(curr_piece)
 
-        # This means the current piece in the game cannot be moved
-        # We have to fix this piece in the board and generate a new piece
-        if not can_move_down(board, curr_piece, piece_pos):
-            merge_board_and_piece(board, curr_piece, piece_pos)
-            curr_piece = get_random_piece()
-            piece_pos = get_random_position(curr_piece)
+		# Redraw board
+		print_board(board, curr_piece, piece_pos, error_message=ERR_MSG)
 
-        # Redraw board
-        print_board(board, curr_piece, piece_pos, error_message=ERR_MSG)
+		# Get player move from STDIN
+		#if player_move != NO_MOVE:
+		
+		if player_move != NO_MOVE:	
+			sleep(1)
+		
 
-        # Get player move from STDIN
-        player_move = raw_input()
+	global fim
+	if not fim:
+		print "GAME OVER!"
+	fim=True
 
-    print "GAME OVER!"
-
-if __name__ == "__main__":
-    play_game()
+play_game()
