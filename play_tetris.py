@@ -445,6 +445,7 @@ def can_rotate_clockwise(board, curr_piece, piece_pos):
 
 from threading import Thread
 from time import sleep
+import socket
 entrada="s"
 
 def readAnalog(number):
@@ -487,54 +488,23 @@ def controlButton():
 globalMove=""
 fim=False
 
-class Controls (Thread):
-	def __init__(self,mestre):
+class Server (Thread):
+	def __init__(self,port):
 		Thread.__init__(self)
-		self.mestre = mestre
-		self.lock = False
+		self.port=port
 
 	def run(self):
+		global globalMove
 		global fim
-		while(1):
-			if self.mestre:
-				if self.mestre.lock:
-					continue
-				elif self.mestre.mestre:
-					if self.mestre.mestre.lock:
-						continue
-		
-			if not self.mestre:
-				if (controlPot()== "L"):
-					global globalMove
-					globalMove="a"
-					self.lock=True
-				elif (controlPot()== "R"):
-					global globalMove
-					globalMove="d"
-					self.lock=True
-				elif (controlPot()== "N"):
-					self.lock=False
-			else:
-				if not self.mestre.mestre:
-					if (controlLDR()== "S"):
-						global globalMove
-						globalMove="e"
-						self.lock=True
-						continue
-					elif (controlLDR()== "P"):
-						fim=True
-						self.lock=False
-					else:
-						self.lock=False
-				else:
-					if(controlButton()):
-						global globalMove
-						globalMove="w"
-					
-			#sleep(0.5)
-			if fim:
-				break
-
+		HOST = '127.0.0.1'
+		PORT = self.port
+		udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+		udp.bind((HOST, PORT))
+		while not fim:
+		    msg, cliente = udp.recvfrom(1024)
+		    globalMove=msg
+		    if msg == "q": break
+		udp.close()
 ############################
 
 
@@ -564,6 +534,7 @@ def play_game():
 
 	"""
 	global globalMove
+	global fim
 	board = init_board()
 	player_move = ""
 	curr_piece = get_random_piece()
@@ -571,13 +542,8 @@ def play_game():
 	print_board(board, curr_piece, piece_pos)
 	ERR_MSG = ""
 	
-	g1= Controls (None)
-	g2= Controls (g1)
-	g3= Controls (g2)
-	
+	g1= Server (5000)
 	g1.start()
-	g2.start()
-	g3.start()
 
 	# Get player move from STDIN
 	
@@ -616,7 +582,8 @@ def play_game():
 			do_move_down = True
 		elif player_move == QUIT_GAME:
 			print "Bye. Thank you for playing!"
-			sys.exit(0)
+			fim=True
+			break
 		else:
 			print "OK"
 			#ERR_MSG = "That is not a valid move!"
@@ -641,7 +608,6 @@ def play_game():
 			sleep(1)
 		
 
-	global fim
 	if not fim:
 		print "GAME OVER!"
 	fim=True
