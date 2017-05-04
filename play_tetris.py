@@ -489,22 +489,29 @@ globalMove=""
 fim=False
 
 class Server (Thread):
-	def __init__(self,port):
-		Thread.__init__(self)
-		self.port=port
+    def __init__(self,port):
+        Thread.__init__(self)
+        self.port=port
 
-	def run(self):
-		global globalMove
-		global fim
-		HOST = '127.0.0.1'
-		PORT = self.port
-		udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-		udp.bind((HOST, PORT))
-		while not fim:
-		    msg, cliente = udp.recvfrom(1024)
-		    globalMove=msg
-		    if msg == "q": break
-		udp.close()
+    def run(self):
+        global globalMove
+        global fim
+        HOST = 'localhost'              # Endereco IP do Servidor
+        PORT = self.port            # Porta que o Servidor esta
+        tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        tcp.bind((HOST, PORT))
+        tcp.listen(1)
+        while True:
+            con, cliente = tcp.accept()
+            print 'Concetado por', cliente
+            while not fim:
+                msg = con.recv(1024)
+                globalMove=msg
+                if msg=="q": break
+                print msg#cliente, msg
+                #print 'Finalizando conexao do cliente', cliente
+        con.close()
+
 ############################
 
 
