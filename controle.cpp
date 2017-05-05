@@ -33,7 +33,6 @@ void control(int n)
 {
 	while(1)
 	{
-		move = '';
 		if(n == 1)
 		{
 			int value =  readAnalog(1);
@@ -47,8 +46,9 @@ void control(int n)
 				move = 'd';
 				master = true;
 			}
-			else
+			else{
 				master = false;
+			}
 		}else if(n == 2 && !master)
 		{
 			int value =  readAnalog(3);
@@ -61,8 +61,9 @@ void control(int n)
 			{
 				std::cout<< "P" << std::endl;
 			}
-			else
+			else{
 				slave1 = false;
+			}
 		}else if(n == 3 && !master && !slave1)
 		{
 			BlackBone_GPIO _GPIO;
