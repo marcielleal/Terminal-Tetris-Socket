@@ -496,20 +496,19 @@ class Server (Thread):
     def run(self):
         global globalMove
         global fim
-        HOST = 'localhost'              # Endereco IP do Servidor
+        HOST = '192.168.7.1'              # Endereco IP do Servidor
         PORT = self.port            # Porta que o Servidor esta
         tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         tcp.bind((HOST, PORT))
         tcp.listen(1)
-        while True:
-            con, cliente = tcp.accept()
-            #print 'Concetado por', cliente
-            while not fim:
-                msg = con.recv(1024)
-                globalMove=msg
-                if msg=="q": break
-                #print msg#cliente, msg
-                #print 'Finalizando conexao do cliente', cliente
+        con, cliente = tcp.accept()
+        print 'Concetado por', cliente
+        while not fim:
+            msg = con.recv(1024)
+            globalMove=msg
+            if msg=="q": break
+            #print msg#cliente, msg
+            #print 'Finalizando conexao do cliente', cliente
         con.close()
 
 ############################
@@ -612,11 +611,12 @@ def play_game():
 		#if player_move != NO_MOVE:
 		
 		if player_move != NO_MOVE:	
-			sleep(1)
+			sleep(0.5)
 		
 
 	if not fim:
 		print "GAME OVER!"
 	fim=True
+
 
 play_game()
