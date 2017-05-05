@@ -503,12 +503,12 @@ class Server (Thread):
         tcp.listen(1)
         while True:
             con, cliente = tcp.accept()
-            print 'Concetado por', cliente
+            #print 'Concetado por', cliente
             while not fim:
                 msg = con.recv(1024)
                 globalMove=msg
                 if msg=="q": break
-                print msg#cliente, msg
+                #print msg#cliente, msg
                 #print 'Finalizando conexao do cliente', cliente
         con.close()
 
